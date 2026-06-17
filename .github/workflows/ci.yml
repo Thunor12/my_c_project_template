@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  build-skeleton:
+    name: Skeleton nob.c (generated project)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: build + test + hello example
+        run: |
+          test -f third_party/nob.h/nob.h
+          test -f nob.c
+          test -f nob.template.c
+          gcc -o nob nob.c
+          ./nob test
+          ./nob
+          ./nob examples
+          ./build/hello
+
+  build-skeleton-windows:
+    name: Skeleton Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: build + test
+        shell: msys2 {0}
+        run: |
+          gcc -o nob.exe nob.c
+          ./nob.exe test
+
+  build-template-sqlite:
+    name: Template nob.template.c + SQLite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: enable sqlite + build catalog examples
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc curl unzip
+          chmod +x scripts/enable-sqlite.sh
+          ./scripts/enable-sqlite.sh
+          ./nob examples
+          ./build/hello
+          ./build/sqlite_demo
+
+      - name: setup fetches all enabled deps
+        run: |
+          ./nob setup

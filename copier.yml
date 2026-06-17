@@ -1,0 +1,49 @@
+# Parameterized project generation (GitHub "Use template" does not support prompts).
+# Usage: copier copy . path/to/my-project
+#
+# https://copier.readthedocs.io/en/stable/configuring/
+
+_min_copier_version: "9.0.0"
+
+project_name:
+  type: str
+  help: Project directory name
+  default: my_c_project
+
+include_sqlite:
+  type: bool
+  help: Include SQLite amalgamation support and sqlite_demo example?
+  default: false
+
+include_teapot:
+  type: bool
+  help: Include teapot HTTP server and teapot_hello example?
+  default: false
+
+_exclude:
+  # Template-repo maintainer build (dogfoods the full dependency catalog)
+  - nob.template.c
+  # Unused optional feature bundles
+  - "{% if not include_sqlite %}config/features/sqlite{% endif %}"
+  - "{% if not include_sqlite %}examples/sqlite_demo.c{% endif %}"
+  - "{% if not include_sqlite %}scripts/enable-sqlite.sh{% endif %}"
+  - "{% if not include_sqlite %}scripts/enable-sqlite.ps1{% endif %}"
+  - "{% if not include_teapot %}config/features/teapot{% endif %}"
+  - "{% if not include_teapot %}examples/teapot_hello.c{% endif %}"
+  - "{% if not include_teapot %}scripts/enable-teapot.sh{% endif %}"
+  - "{% if not include_teapot %}scripts/enable-teapot.ps1{% endif %}"
+
+_tasks:
+  - command: mkdir -p config/enabled
+    when: "{{ include_sqlite or include_teapot }}"
+  - command: cp config/features/sqlite/sqlite.h config/enabled/sqlite.h
+    when: "{{ include_sqlite }}"
+  - command: cp config/features/sqlite/sqlite.build.h config/enabled/sqlite.build.h
+    when: "{{ include_sqlite }}"
+  - command: cp config/features/teapot/teapot.h config/enabled/teapot.h
+    when: "{{ include_teapot }}"
+  - command: cp config/features/teapot/teapot.build.h config/enabled/teapot.build.h
+    when: "{{ include_teapot }}"
+  - command: |
+      grep -q 'third_party/teapot' .gitmodules 2>/dev/null || printf '%s\n' '' '[submodule "third_party/teapot"]' '	path = third_party/teapot' '	url = https://github.com/Thunor12/teapot.git' >> .gitmodules
+    when: "{{ include_teapot }}"
