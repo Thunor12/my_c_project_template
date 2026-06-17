@@ -21,24 +21,44 @@ static bool sqlite_hex_eq(const char *a, const char *b)
     return *a == *b;
 }
 
+static bool sqlite_parse_hash_line(const char *line, char *out_hex, size_t out_size)
+{
+    size_t j = 0;
+    for (size_t i = 0; line[i] && j + 1 < out_size; i++)
+    {
+        char c = line[i];
+        if (c == ' ' || c == '\n' || c == '\r')
+            break;
+        out_hex[j++] = c;
+    }
+    out_hex[j] = '\0';
+    return j == 64;
+}
+
 static bool sqlite_verify_sha256(const char *path, const char *expected_hex)
 {
     const char *hash_path = BUILD_DIR ".verify.sha256";
     Nob_Cmd cmd = {0};
+    bool ran = false;
 
 #ifdef _WIN32
     nob_cmd_append(&cmd, "powershell", "-NoProfile", "-Command",
                     "(Get-FileHash -LiteralPath", path, "-Algorithm SHA256).Hash.ToLower() | "
                     "Set-Content -NoNewline -Path", hash_path);
+    ran = nob_cmd_run(&cmd);
 #else
-    Nob_String_Builder sh = {0};
-    nob_sb_appendf(&sh, "sha256sum '%s' | awk '{print $1}' > '%s'", path, hash_path);
-    nob_sb_append_null(&sh);
-    nob_cmd_append(&cmd, "sh", "-c", sh.items);
-    nob_sb_free(sh);
+    nob_cmd_append(&cmd, "sha256sum", path);
+    ran = nob_cmd_run(&cmd, .stdout_path = hash_path);
+    if (!ran)
+    {
+        nob_cmd_free(cmd);
+        cmd = (Nob_Cmd){0};
+        nob_cmd_append(&cmd, "openssl", "dgst", "-sha256", "-r", path);
+        ran = nob_cmd_run(&cmd, .stdout_path = hash_path);
+    }
 #endif
 
-    if (!nob_cmd_run(&cmd))
+    if (!ran)
     {
         nob_log(NOB_ERROR, "Failed to compute SHA256 for %s", path);
         return false;
@@ -53,9 +73,17 @@ static bool sqlite_verify_sha256(const char *path, const char *expected_hex)
     }
     nob_delete_file(hash_path);
 
-    bool ok = sqlite_hex_eq(hash_sb.items, expected_hex);
+    char actual[65] = {0};
+    if (!sqlite_parse_hash_line(hash_sb.items, actual, sizeof(actual)))
+    {
+        nob_log(NOB_ERROR, "Unexpected SHA256 output for %s", path);
+        nob_sb_free(hash_sb);
+        return false;
+    }
+
+    bool ok = sqlite_hex_eq(actual, expected_hex);
     if (!ok)
-        nob_log(NOB_ERROR, "SHA256 mismatch for %s (expected %s)", path, expected_hex);
+        nob_log(NOB_ERROR, "SHA256 mismatch for %s (expected %s, got %s)", path, expected_hex, actual);
     nob_sb_free(hash_sb);
     return ok;
 }
