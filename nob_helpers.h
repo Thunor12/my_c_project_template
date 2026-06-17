@@ -6,6 +6,7 @@
 
 #include "nob_config.h"
 #include "config/build_common.h"
+#include <string.h>
 
 extern Nob_Procs procs;
 extern NobBuildCtx g_build;
@@ -15,6 +16,10 @@ CompResult compile_stblib_to_obj(const char *header_path, const char *impl_flag,
 CompResult build_program(const char *exe_name, Nob_File_Paths *sources, FileList *stb_objs, const char *extra_obj);
 int run_built_exe(const char *exe_name);
 
+/* Cross-platform filesystem helpers (nob.h under the hood). */
+bool nob_extract_zip(const char *zip_path, const char *dest_dir);
+bool nob_copy_file_in_dir(const char *src_dir, const char *dst_dir, const char *filename);
+
 #ifdef NOB_HELPERS_IMPLEMENTATION
 
 Nob_Procs procs = {0};
@@ -23,6 +28,67 @@ NobBuildCtx g_build = {
     .cc = CC,
     .opt_level = OPT_LEVEL,
 };
+
+static bool nob_path_has_sep(const char *dir)
+{
+    size_t n = strlen(dir);
+    return n > 0 && (dir[n - 1] == '/' || dir[n - 1] == '\\');
+}
+
+bool nob_copy_file_in_dir(const char *src_dir, const char *dst_dir, const char *filename)
+{
+    Nob_String_Builder src = {0};
+    Nob_String_Builder dst = {0};
+    if (nob_path_has_sep(src_dir))
+        nob_sb_appendf(&src, "%s%s", src_dir, filename);
+    else
+        nob_sb_appendf(&src, "%s/%s", src_dir, filename);
+    if (nob_path_has_sep(dst_dir))
+        nob_sb_appendf(&dst, "%s%s", dst_dir, filename);
+    else
+        nob_sb_appendf(&dst, "%s/%s", dst_dir, filename);
+    nob_sb_append_null(&src);
+    nob_sb_append_null(&dst);
+
+    bool ok = nob_copy_file(src.items, dst.items);
+    nob_sb_free(src);
+    nob_sb_free(dst);
+    return ok;
+}
+
+bool nob_extract_zip(const char *zip_path, const char *dest_dir)
+{
+    Nob_Cmd cmd = {0};
+
+#ifdef _WIN32
+    nob_cmd_append(&cmd, "powershell", "-NoProfile", "-Command",
+                    "Expand-Archive", "-LiteralPath", zip_path,
+                    "-DestinationPath", dest_dir, "-Force");
+    if (nob_cmd_run(&cmd))
+        return true;
+    nob_cmd_free(cmd);
+    cmd = (Nob_Cmd){0};
+#endif
+
+    nob_cmd_append(&cmd, "unzip", "-o", zip_path, "-d", dest_dir);
+    if (nob_cmd_run(&cmd))
+        return true;
+    nob_cmd_free(cmd);
+    cmd = (Nob_Cmd){0};
+
+    nob_cmd_append(&cmd, "python3", "-c",
+                    "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])",
+                    zip_path, dest_dir);
+    if (nob_cmd_run(&cmd))
+        return true;
+    nob_cmd_free(cmd);
+    cmd = (Nob_Cmd){0};
+
+    nob_cmd_append(&cmd, "python", "-c",
+                    "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])",
+                    zip_path, dest_dir);
+    return nob_cmd_run(&cmd);
+}
 
 static void append_compile_flags(Nob_Cmd *cmd)
 {

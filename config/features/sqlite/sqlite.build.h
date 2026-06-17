@@ -9,6 +9,7 @@
 #endif
 
 #include <ctype.h>
+#include <string.h>
 
 static bool sqlite_hex_eq(const char *a, const char *b)
 {
@@ -89,64 +90,20 @@ static CompResult sqlite_fetch_amalgamation(void)
         }
     }
 
-#ifdef _WIN32
+    if (!nob_extract_zip(SQLITE_ZIP, BUILD_DIR))
     {
-        Nob_Cmd cmd = {0};
-        nob_cmd_append(&cmd, "powershell", "-Command",
-                        "Expand-Archive", "-Path", SQLITE_ZIP,
-                        "-DestinationPath", BUILD_DIR, "-Force");
-        if (!nob_cmd_run(&cmd))
-        {
-            nob_log(NOB_ERROR, "Failed to extract %s", SQLITE_ZIP);
-            return COMP_RES__FAILED;
-        }
+        nob_log(NOB_ERROR, "Failed to extract %s (need unzip, python, or PowerShell)", SQLITE_ZIP);
+        return COMP_RES__FAILED;
     }
-    {
-        Nob_Cmd cmd = {0};
-        nob_cmd_append(&cmd, "powershell", "-Command",
-                        "Move-Item", "-Path", SQLITE_EXTRACT_DIR "\\sqlite3.*",
-                        "-Destination", SQLITE_DIR, "-Force");
-        if (!nob_cmd_run(&cmd))
-        {
-            nob_log(NOB_ERROR, "Failed to move SQLite sources into %s", SQLITE_DIR);
-            return COMP_RES__FAILED;
-        }
-    }
-    {
-        Nob_Cmd cmd = {0};
-        nob_cmd_append(&cmd, "powershell", "-Command",
-                        "Remove-Item", "-Path", SQLITE_EXTRACT_DIR,
-                        "-Recurse", "-Force", "-ErrorAction", "SilentlyContinue");
-        nob_cmd_run(&cmd);
-    }
-#else
-    {
-        Nob_Cmd cmd = {0};
-        nob_cmd_append(&cmd, "unzip", "-o", SQLITE_ZIP, "-d", BUILD_DIR);
-        if (!nob_cmd_run(&cmd))
-        {
-            nob_log(NOB_ERROR, "Failed to extract %s (is unzip installed?)", SQLITE_ZIP);
-            return COMP_RES__FAILED;
-        }
-    }
-    {
-        Nob_Cmd cmd = {0};
-        nob_cmd_append(&cmd, "mv", SQLITE_EXTRACT_DIR "/sqlite3.c", SQLITE_DIR);
-        nob_cmd_append(&cmd, "mv", SQLITE_EXTRACT_DIR "/sqlite3.h", SQLITE_DIR);
-        if (!nob_cmd_run(&cmd))
-        {
-            nob_log(NOB_ERROR, "Failed to move SQLite sources into %s", SQLITE_DIR);
-            return COMP_RES__FAILED;
-        }
-    }
-    {
-        Nob_Cmd cmd = {0};
-        nob_cmd_append(&cmd, "rm", "-rf", SQLITE_EXTRACT_DIR);
-        nob_cmd_run(&cmd);
-    }
-#endif
 
-    remove(SQLITE_ZIP);
+    if (!nob_copy_file_in_dir(SQLITE_EXTRACT_DIR, SQLITE_DIR, "sqlite3.c") ||
+        !nob_copy_file_in_dir(SQLITE_EXTRACT_DIR, SQLITE_DIR, "sqlite3.h"))
+    {
+        nob_log(NOB_ERROR, "Failed to copy SQLite sources into %s", SQLITE_DIR);
+        return COMP_RES__FAILED;
+    }
+
+    nob_delete_file(SQLITE_ZIP);
 
     if (!nob_file_exists(SQLITE_SRC) || !nob_file_exists(SQLITE_HDR))
     {
