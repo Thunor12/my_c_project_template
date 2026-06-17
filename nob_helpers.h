@@ -7,6 +7,7 @@
 #include "nob_config.h"
 #include "config/build_common.h"
 #include <string.h>
+#include <stdlib.h>
 
 extern Nob_Procs procs;
 extern NobBuildCtx g_build;
@@ -19,6 +20,7 @@ int run_built_exe(const char *exe_name);
 /* Cross-platform filesystem helpers (nob.h under the hood). */
 bool nob_extract_zip(const char *zip_path, const char *dest_dir);
 bool nob_copy_file_in_dir(const char *src_dir, const char *dst_dir, const char *filename);
+bool nob_clean_build_dir(const char *dir);
 
 #ifdef NOB_HELPERS_IMPLEMENTATION
 
@@ -90,6 +92,21 @@ bool nob_extract_zip(const char *zip_path, const char *dest_dir)
     return nob_cmd_run(&cmd);
 }
 
+bool nob_clean_build_dir(const char *dir)
+{
+    Nob_Cmd cmd = {0};
+
+#ifdef _WIN32
+    nob_cmd_append(&cmd, "powershell", "-NoProfile", "-Command",
+                    "Remove-Item", "-LiteralPath", dir, "-Recurse", "-Force",
+                    "-ErrorAction", "SilentlyContinue");
+#else
+    nob_cmd_append(&cmd, "rm", "-rf", dir);
+#endif
+
+    return nob_cmd_run(&cmd);
+}
+
 static void append_compile_flags(Nob_Cmd *cmd)
 {
     nob_cmd_append(cmd, COMPILE_FLAGS_BASE);
@@ -121,6 +138,10 @@ void free_file_list(FileList *fl)
         return;
     for (size_t i = 0; i < fl->count; i++)
         nob_sb_free(fl->items[i]);
+    free(fl->items);
+    fl->items = NULL;
+    fl->count = 0;
+    fl->capacity = 0;
 }
 
 static void src_to_output_name(Nob_String_Builder *sb, const char *src_path, const char *ext)

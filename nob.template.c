@@ -55,7 +55,8 @@ int main(int argc, char **argv)
         if (0 == strcmp(arg, "clean"))
         {
             nob_log(NOB_INFO, "Cleaning...");
-            (void)nob_delete_file(BUILD_DIR);
+            if (!nob_clean_build_dir(BUILD_DIR))
+                return 1;
             return 0;
         }
         if (0 == strcmp(arg, "test") || 0 == strcmp(arg, "tests"))

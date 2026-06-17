@@ -1,6 +1,7 @@
 # Parameterized project generation (GitHub "Use template" does not support prompts).
 # Usage: copier copy . path/to/my-project
 #
+# Windows: run Copier from Git Bash or WSL — _tasks use Unix shell (mkdir, cp, grep).
 # https://copier.readthedocs.io/en/stable/configuring/
 
 _min_copier_version: "9.0.0"
@@ -46,4 +47,6 @@ _tasks:
     when: "{{ include_teapot }}"
   - command: |
       grep -q 'third_party/teapot' .gitmodules 2>/dev/null || printf '%s\n' '' '[submodule "third_party/teapot"]' '	path = third_party/teapot' '	url = https://github.com/Thunor12/teapot.git' >> .gitmodules
+    when: "{{ include_teapot }}"
+  - command: git submodule update --init --depth 1 third_party/teapot
     when: "{{ include_teapot }}"

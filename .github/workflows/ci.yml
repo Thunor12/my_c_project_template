@@ -2,9 +2,7 @@ name: ci
 
 on:
   push:
-    branches: ["main", "master"]
   pull_request:
-    branches: ["main", "master"]
 
 jobs:
   build-skeleton:
@@ -19,7 +17,6 @@ jobs:
         run: |
           test -f third_party/nob.h/nob.h
           test -f nob.c
-          test -f nob.template.c
           gcc -o nob nob.c
           ./nob test
           ./nob
@@ -41,11 +38,13 @@ jobs:
           update: true
           install: mingw-w64-ucrt-x86_64-gcc
 
-      - name: build + test
+      - name: build + test + hello
         shell: msys2 {0}
         run: |
           gcc -o nob.exe nob.c
           ./nob.exe test
+          ./nob.exe examples
+          ./build/hello.exe
 
   build-template-sqlite:
     name: Template nob.template.c + SQLite
@@ -57,6 +56,7 @@ jobs:
 
       - name: enable sqlite + build catalog examples
         run: |
+          test -f nob.template.c
           sudo apt-get update
           sudo apt-get install -y gcc curl unzip
           chmod +x scripts/enable-sqlite.sh
@@ -68,3 +68,36 @@ jobs:
       - name: setup fetches all enabled deps
         run: |
           ./nob setup
+
+  build-template-teapot:
+    name: Template nob.template.c + teapot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: enable teapot + build catalog examples
+        run: |
+          test -f nob.template.c
+          sudo apt-get update
+          sudo apt-get install -y gcc curl
+          chmod +x scripts/enable-teapot.sh
+          ./scripts/enable-teapot.sh
+          test -f third_party/teapot/stb_teapot.h
+          ./nob examples
+          ./build/hello
+          test -f ./build/teapot_hello
+
+      - name: teapot HTTP smoke test
+        run: |
+          ./build/teapot_hello &
+          teapot_pid=$!
+          cleanup() { kill "$teapot_pid" 2>/dev/null || true; wait "$teapot_pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            curl -sf http://127.0.0.1:8080/hello && exit 0
+            sleep 0.5
+          done
+          echo "teapot_hello did not respond on /hello" >&2
+          exit 1

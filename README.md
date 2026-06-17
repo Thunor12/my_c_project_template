@@ -33,13 +33,20 @@ You get the skeleton `nob.c`. Add features with `scripts/enable-*.sh`.
 ### B) Copier (pick features at generation)
 
 ```bash
-copier copy https://github.com/<you>/c_project_template.git my_app
+copier copy https://github.com/<you>/c_project_template.git my_app --trust --defaults
+```
+
+**Windows:** run Copier from **Git Bash** or **WSL** (`_tasks` use `mkdir`, `cp`, `grep`). After generation with teapot:
+
+```bash
+git init
+git submodule update --init third_party/teapot
 ```
 
 | Question | Effect |
 |----------|--------|
 | `include_sqlite` | SQLite bundle, demo, enable scripts → `config/enabled/` |
-| `include_teapot` | teapot bundle, demo, `.gitmodules` entry → `config/enabled/` |
+| `include_teapot` | teapot bundle, demo, `.gitmodules` + submodule init → `config/enabled/` |
 
 ## Dependency catalog
 
@@ -51,10 +58,11 @@ config/nob_dep_examples.h   shared optional demo builds
 ```
 
 ```bash
-./nob setup           # fetch all enabled optional deps
-./nob setup sqlite    # one dependency
+./nob setup           # fetch all enabled optional deps (skeleton + template)
 ./nob examples        # hello + enabled dep demos
 ```
+
+Per-target setup (`./nob setup sqlite`, etc.) is available in **`nob.template.c`** (template repo only).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for adding a new dependency to the catalog.
 
@@ -78,8 +86,11 @@ gcc -o nob nob.template.c  # template repo maintainer
 
 ## CI
 
-- **Skeleton** — `gcc -o nob nob.c`, test, `hello` example
-- **Template + SQLite** — `enable-sqlite.sh` (rebuilds `nob.template.c`), all catalog examples
+- **Skeleton** — `gcc -o nob nob.c`, test, `hello` example (no `nob.template.c` required)
+- **Template + SQLite** — `enable-sqlite.sh`, catalog examples
+- **Template + teapot** — `enable-teapot.sh`, builds `teapot_hello`, HTTP probe on `/hello`
+
+Runs on all branch pushes and pull requests.
 
 ## License
 

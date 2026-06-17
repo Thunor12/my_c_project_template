@@ -1,7 +1,6 @@
 .vscode/
 build/
 third_party/sqlite/
-third_party/teapot/
 build/sqlite*
 build/*.zip
 

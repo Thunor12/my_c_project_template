@@ -27,7 +27,7 @@
 #define COMPILE_FLAGS_BASE OPT_LEVEL, "-g",                                                         \
                            "-I" SRC_DIR,                                                          \
                            "-I" THIRD_PARTY_DIR,                                                  \
-                           "-Wall", "-Wextra", "-Wpedantic", "-Wconversion", "-Wimplicit-fallthrough", \
+                           "-Wall", "-Wextra", "-Wpedantic", "-Wswitch-enum", "-Wconversion", "-Wimplicit-fallthrough", \
                            "-Wshadow", "-Wpointer-arith", "-Wcast-qual", "-Wstrict-prototypes",   \
                            "-D_FORTIFY_SOURCE=2",                                                 \
                            "-fstack-clash-protection",                                            \

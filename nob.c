@@ -28,13 +28,12 @@ int main(int argc, char **argv)
     int do_tests = 0;
     int do_examples = 0;
     int do_setup_all = 0;
-    int do_setup_sqlite = 0;
-    int do_setup_teapot = 0;
 
     Nob_File_Paths sources = {0};
 
     NOB_GO_REBUILD_URSELF_PLUS(argc, argv, NOB_HDR, "nob_config.h", "config/build_common.h",
-                               "nob_helpers.h", "config/nob_macros.h");
+                               "nob_helpers.h", "config/nob_macros.h", "config/nob_dep_setup.h",
+                               "config/nob_dep_examples.h");
 
     if (!nob_file_exists(NOB_HDR))
     {
@@ -54,7 +53,8 @@ int main(int argc, char **argv)
         if (0 == strcmp(arg, "clean"))
         {
             nob_log(NOB_INFO, "Cleaning...");
-            (void)nob_delete_file(BUILD_DIR);
+            if (!nob_clean_build_dir(BUILD_DIR))
+                return 1;
             return 0;
         }
         if (0 == strcmp(arg, "test") || 0 == strcmp(arg, "tests"))
@@ -66,18 +66,10 @@ int main(int argc, char **argv)
             if (argc > 0)
             {
                 char *what = nob_shift_args(&argc, &argv);
-                if (0 == strcmp(what, "sqlite"))
-                    do_setup_sqlite = 1;
-                else if (0 == strcmp(what, "teapot"))
-                    do_setup_teapot = 1;
-                else
-                {
-                    nob_log(NOB_ERROR, "Unknown setup target: %s (try: sqlite, teapot)", what);
-                    return 1;
-                }
+                nob_log(NOB_ERROR, "Unknown setup target: %s — use: ./nob setup", what);
+                return 1;
             }
-            else
-                do_setup_all = 1;
+            do_setup_all = 1;
         }
     }
 
@@ -86,30 +78,6 @@ int main(int argc, char **argv)
         comp_res = nob_run_setup_all();
         HANDLE_COM_RES(comp_res, need_sync);
         goto defer;
-    }
-
-    if (do_setup_sqlite)
-    {
-#ifndef NOB_CONFIG_HAS_SQLITE
-        nob_log(NOB_ERROR, "sqlite is not enabled — scripts/enable-sqlite.sh or copier include_sqlite=true");
-        return 1;
-#else
-        comp_res = sqlite_setup_deps();
-        HANDLE_COM_RES(comp_res, need_sync);
-        goto defer;
-#endif
-    }
-
-    if (do_setup_teapot)
-    {
-#ifndef NOB_CONFIG_HAS_TEAPOT
-        nob_log(NOB_ERROR, "teapot is not enabled — scripts/enable-teapot.sh or copier include_teapot=true");
-        return 1;
-#else
-        comp_res = teapot_setup_deps();
-        HANDLE_COM_RES(comp_res, need_sync);
-        goto defer;
-#endif
     }
 
     if (do_tests)
