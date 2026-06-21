@@ -1,0 +1,33 @@
+# Dependency catalog — single source of truth for project generation.
+# Add a new optional dep here; templates loop over optional_deps (no dep names in *.jinja).
+
+deps:
+  sqlite:
+    setup_fn: sqlite_setup_deps
+    build_lib_fn: sqlite_build_lib
+    example:
+      binary: sqlite_demo
+      source_macro: SQLITE_EXAMPLE
+      link_mode: extra_obj
+      extra_obj_macro: SQLITE_OBJ
+    paths:
+      feature_dir: config/features/sqlite
+      example_file: examples/sqlite_demo.c
+      enable_sh: scripts/enable-sqlite.sh
+      enable_ps1: scripts/enable-sqlite.ps1
+
+  teapot:
+    setup_fn: teapot_setup_deps
+    build_lib_fn: teapot_build_lib
+    example:
+      binary: teapot_hello
+      source_macro: TEAPOT_EXAMPLE
+      link_mode: stb_objs
+    submodule:
+      path: third_party/teapot
+      url: https://github.com/Thunor12/teapot.git
+    paths:
+      feature_dir: config/features/teapot
+      example_file: examples/teapot_hello.c
+      enable_sh: scripts/enable-teapot.sh
+      enable_ps1: scripts/enable-teapot.ps1

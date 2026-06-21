@@ -4,15 +4,7 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-# Template repo: nob.template.c dogfoods the dependency catalog.
-# Generated projects: skeleton nob.c only.
-if [ -n "${NOB_SRC:-}" ]; then
-    :
-elif [ -f ./nob.template.c ]; then
-    NOB_SRC=nob.template.c
-else
-    NOB_SRC=nob.c
-fi
+NOB_SRC="${NOB_SRC:-nob.c}"
 
 if [ ! -f ./nob ] && [ ! -f ./nob.exe ]; then
     if command -v gcc >/dev/null 2>&1; then

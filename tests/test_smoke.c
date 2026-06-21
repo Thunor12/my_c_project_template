@@ -1,6 +1,5 @@
 // Smoke test — run via: ./nob test
 #include <stdio.h>
-#include <stdlib.h>
 
 int main(void)
 {

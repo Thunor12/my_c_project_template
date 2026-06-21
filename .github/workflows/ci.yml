@@ -10,26 +10,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-skeleton:
-    name: Skeleton nob.c (generated project)
+  test-template-system:
+    name: Catalog codegen + render tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: build + test + hello example
+      - name: run template system tests
         run: |
-          test -f third_party/nob.h/nob.h
-          test -f nob.c
-          gcc -o nob nob.c
-          ./nob test
-          ./nob
-          ./nob examples
-          ./build/hello
+          sudo apt-get update
+          sudo apt-get install -y gcc curl unzip
+          chmod +x scripts/test-template-system.sh
+          ./scripts/test-template-system.sh
 
   build-skeleton-windows:
-    name: Skeleton Windows
+    name: Generated project Windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,29 +40,34 @@ jobs:
           update: true
           install: mingw-w64-ucrt-x86_64-gcc
 
-      - name: build + test + hello
+      - name: render + build minimal project
         shell: msys2 {0}
         run: |
+          pip install -q -r scripts/requirements-render.txt
+          python scripts/render_project.py --deps "" --output output_project
+          cd output_project
+          git submodule update --init third_party/nob.h
           gcc -o nob.exe nob.c
           ./nob.exe test
+          ./nob.exe
           ./nob.exe examples
           ./build/hello.exe
 
   build-template-sqlite:
-    name: Template nob.template.c + SQLite
+    name: Template repo + SQLite
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: enable sqlite + build catalog examples
+      - name: sync codegen + build catalog examples
         run: |
-          test -f nob.template.c
+          pip install -q -r scripts/requirements-render.txt
+          python scripts/render_project.py --sync-maintainer
           sudo apt-get update
           sudo apt-get install -y gcc curl unzip
-          chmod +x scripts/enable-sqlite.sh
-          ./scripts/enable-sqlite.sh
+          ./nob setup sqlite
           ./nob examples
           ./build/hello
           ./build/sqlite_demo
@@ -75,20 +77,19 @@ jobs:
           ./nob setup
 
   build-template-teapot:
-    name: Template nob.template.c + teapot
+    name: Template repo + teapot
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: enable teapot + build catalog examples
+      - name: sync codegen + build catalog examples
         run: |
-          test -f nob.template.c
+          pip install -q -r scripts/requirements-render.txt
+          python scripts/render_project.py --sync-maintainer
           sudo apt-get update
           sudo apt-get install -y gcc curl
-          chmod +x scripts/enable-teapot.sh
-          ./scripts/enable-teapot.sh
           test -f third_party/teapot/stb_teapot.h
           ./nob examples
           ./build/hello

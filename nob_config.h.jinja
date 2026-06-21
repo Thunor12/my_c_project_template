@@ -36,10 +36,8 @@
 #endif
 
 /* Optional feature configs — generated from config/catalog.yaml */
-
-#include "config/enabled/sqlite.h"
-
-#include "config/enabled/teapot.h"
-
+{% for dep in optional_deps %}
+#include "config/enabled/{{ dep }}.h"
+{% endfor %}
 
 #endif

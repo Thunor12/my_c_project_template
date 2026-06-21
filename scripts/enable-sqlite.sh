@@ -16,9 +16,6 @@ cp config/features/sqlite/sqlite.build.h config/enabled/sqlite.build.h
 echo "activated config/enabled/sqlite.h + sqlite.build.h"
 
 NOB_SRC=nob.c
-if [ -f nob.template.c ]; then
-    NOB_SRC=nob.template.c
-fi
 
 if command -v gcc >/dev/null 2>&1; then
     gcc -o nob "$NOB_SRC"

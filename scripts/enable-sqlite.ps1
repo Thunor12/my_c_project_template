@@ -11,7 +11,6 @@ Copy-Item "config/features/sqlite/sqlite.h" "config/enabled/sqlite.h" -Force
 Copy-Item "config/features/sqlite/sqlite.build.h" "config/enabled/sqlite.build.h" -Force
 Write-Host "activated config/enabled/sqlite.h + sqlite.build.h"
 
-$nobSrc = if (Test-Path "nob.template.c") { "nob.template.c" } else { "nob.c" }
-gcc -o nob.exe $nobSrc
+gcc -o nob.exe nob.c
 ./nob.exe setup sqlite
 Write-Host "sqlite enabled — run: ./nob.exe examples"

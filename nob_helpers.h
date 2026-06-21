@@ -21,6 +21,7 @@ int run_built_exe(const char *exe_name);
 bool nob_extract_zip(const char *zip_path, const char *dest_dir);
 bool nob_copy_file_in_dir(const char *src_dir, const char *dst_dir, const char *filename);
 bool nob_clean_build_dir(const char *dir);
+void nob_go_rebuild_urself_project(int argc, char **argv, const char *source_path);
 
 #ifdef NOB_HELPERS_IMPLEMENTATION
 
@@ -107,6 +108,74 @@ bool nob_clean_build_dir(const char *dir)
     return nob_cmd_run(&cmd);
 }
 
+void nob_go_rebuild_urself_project(int argc, char **argv, const char *source_path)
+{
+    const char *fixed_deps[] = {
+        NOB_HDR,
+        "nob_config.h",
+        "config/build_common.h",
+        "nob_helpers.h",
+        "config/nob_macros.h",
+        "config/nob_dep_setup.h",
+        "config/nob_dep_examples.h",
+    };
+
+    const char *binary_path = nob_shift(argv, argc);
+#ifdef _WIN32
+    if (!nob_sv_ends_with_cstr(nob_sv_from_cstr(binary_path), ".exe"))
+        binary_path = nob_temp_sprintf("%s.exe", binary_path);
+#endif
+
+    Nob_File_Paths source_paths = {0};
+    nob_da_append(&source_paths, source_path);
+    for (size_t i = 0; i < NOB_ARRAY_LEN(fixed_deps); i++)
+        nob_da_append(&source_paths, fixed_deps[i]);
+
+    Nob_File_Paths enabled_entries = {0};
+    if (nob_get_file_type("config/enabled") == NOB_FILE_DIRECTORY &&
+        nob_read_entire_dir("config/enabled", &enabled_entries))
+    {
+        for (size_t i = 0; i < enabled_entries.count; i++)
+        {
+            const char *name = enabled_entries.items[i];
+            size_t n = strlen(name);
+
+            if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0)
+                continue;
+            if (n < 3 || strcmp(name + n - 2, ".h") != 0)
+                continue;
+
+            nob_da_append(&source_paths, nob_temp_sprintf("config/enabled/%s", name));
+        }
+    }
+
+    int rebuild_is_needed = nob_needs_rebuild(binary_path, source_paths.items, source_paths.count);
+    nob_da_free(source_paths);
+    if (rebuild_is_needed < 0)
+        exit(1);
+    if (!rebuild_is_needed)
+        return;
+
+    Nob_Cmd cmd = {0};
+    const char *old_binary_path = nob_temp_sprintf("%s.old", binary_path);
+
+    if (!nob_rename(binary_path, old_binary_path))
+        exit(1);
+    nob_cmd_append(&cmd, NOB_REBUILD_URSELF(binary_path, source_path));
+    Nob_Cmd_Opt opt = {0};
+    if (!nob_cmd_run_opt(&cmd, opt))
+    {
+        nob_rename(old_binary_path, binary_path);
+        exit(1);
+    }
+
+    nob_cmd_append(&cmd, binary_path);
+    nob_da_append_many(&cmd, argv, argc);
+    if (!nob_cmd_run_opt(&cmd, opt))
+        exit(1);
+    exit(0);
+}
+
 static void append_compile_flags(Nob_Cmd *cmd)
 {
     nob_cmd_append(cmd, COMPILE_FLAGS_BASE);
@@ -174,7 +243,6 @@ static CompResult compile_objs(Nob_File_Paths *sources, FileList *out_objs)
         nob_cc_output(&cmd, obj.items);
         nob_cmd_append(&cmd, "-c");
         nob_cc_inputs(&cmd, sources->items[i]);
-        append_link_flags(&cmd);
 
         if (!nob_cmd_run(&cmd, .async = &procs))
         {
@@ -223,7 +291,6 @@ CompResult compile_stblib_to_obj(const char *header_path, const char *impl_flag,
     nob_cc_output(&cmd, obj.items);
     nob_cmd_append(&cmd, "-c");
     nob_cc_inputs(&cmd, header_path);
-    append_link_flags(&cmd);
 
     if (!nob_cmd_run(&cmd, .async = &procs))
     {

@@ -1,7 +1,9 @@
 # SQLite optional dependency — fetched by: ./nob setup sqlite
 kind = "vendor"
 version = "3450100"
+release_year = "2024"
 url = "https://www.sqlite.org/2024/sqlite-amalgamation-3450100.zip"
 into = "third_party/sqlite"
 artifacts = ["sqlite3.c", "sqlite3.h"]
 verify_sha256_sqlite3_c = "1a206854aa9fe0ccc1b609f5cfce67eb52ac0a8f5aa2f5e853f7c3ed84c710ab"
+verify_sha256_sqlite3_h = "41e066ccd4f89e938f136ceb48c996c54dc381b59fe566dea48864c3750b779e"

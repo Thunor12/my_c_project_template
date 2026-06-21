@@ -1,4 +1,6 @@
 .vscode/
+output_project/
+output_*/
 build/
 third_party/sqlite/
 build/sqlite*
@@ -7,6 +9,7 @@ build/*.zip
 # Activated optional configs (use scripts/enable-*.sh or copier render)
 config/enabled/*
 !config/enabled/.gitkeep
+!config/enabled/*.h
 
 *.exe
 *.exe.old

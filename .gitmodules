@@ -1,3 +1,7 @@
 [submodule "third_party/nob.h"]
 	path = third_party/nob.h
 	url = https://github.com/tsoding/nob.h.git
+
+[submodule "third_party/teapot"]
+	path = third_party/teapot
+	url = https://github.com/Thunor12/teapot.git

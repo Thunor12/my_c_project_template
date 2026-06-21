@@ -21,9 +21,6 @@ fi
 git submodule update --init --depth 1 third_party/teapot
 
 NOB_SRC=nob.c
-if [ -f nob.template.c ]; then
-    NOB_SRC=nob.template.c
-fi
 
 if command -v gcc >/dev/null 2>&1; then
     gcc -o nob "$NOB_SRC"

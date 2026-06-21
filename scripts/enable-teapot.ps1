@@ -17,6 +17,5 @@ if ($gitmodules -notmatch "third_party/teapot") {
 }
 git submodule update --init --depth 1 third_party/teapot
 
-$nobSrc = if (Test-Path "nob.template.c") { "nob.template.c" } else { "nob.c" }
-gcc -o nob.exe $nobSrc
+gcc -o nob.exe nob.c
 Write-Host "teapot enabled — run: ./nob.exe examples"
