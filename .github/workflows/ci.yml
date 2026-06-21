@@ -1,0 +1,109 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-template-system:
+    name: Catalog codegen + render tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: run template system tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc curl unzip
+          chmod +x scripts/test-template-system.sh
+          ./scripts/test-template-system.sh
+
+  build-skeleton-windows:
+    name: Generated project Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: mingw-w64-ucrt-x86_64-gcc
+
+      - name: render + build minimal project
+        shell: msys2 {0}
+        run: |
+          pip install -q -r scripts/requirements-render.txt
+          python scripts/render_project.py --deps "" --output output_project
+          cd output_project
+          git submodule update --init third_party/nob.h
+          gcc -o nob.exe nob.c
+          ./nob.exe test
+          ./nob.exe
+          ./nob.exe examples
+          ./build/hello.exe
+
+  build-template-sqlite:
+    name: Template repo + SQLite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: sync codegen + build catalog examples
+        run: |
+          pip install -q -r scripts/requirements-render.txt
+          python scripts/render_project.py --sync-maintainer
+          sudo apt-get update
+          sudo apt-get install -y gcc curl unzip
+          ./nob setup sqlite
+          ./nob examples
+          ./build/hello
+          ./build/sqlite_demo
+
+      - name: setup fetches all enabled deps
+        run: |
+          ./nob setup
+
+  build-template-teapot:
+    name: Template repo + teapot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: sync codegen + build catalog examples
+        run: |
+          pip install -q -r scripts/requirements-render.txt
+          python scripts/render_project.py --sync-maintainer
+          sudo apt-get update
+          sudo apt-get install -y gcc curl
+          test -f third_party/teapot/stb_teapot.h
+          ./nob examples
+          ./build/hello
+          test -f ./build/teapot_hello
+
+      - name: teapot HTTP smoke test
+        run: |
+          ./build/teapot_hello &
+          teapot_pid=$!
+          cleanup() { kill "$teapot_pid" 2>/dev/null || true; wait "$teapot_pid" 2>/dev/null || true; }
+          trap cleanup EXIT
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            curl -sf http://127.0.0.1:8080/hello && exit 0
+            sleep 0.5
+          done
+          echo "teapot_hello did not respond on /hello" >&2
+          exit 1

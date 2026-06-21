@@ -1,0 +1,26 @@
+#ifndef NOB_DEP_SETUP_H
+#define NOB_DEP_SETUP_H
+
+/* Optional dependency setup — generated from config/catalog.yaml + optional_deps. */
+
+static CompResult nob_run_setup_all(void)
+{
+    CompResult result = COMP_RES__NO_ACTION;
+    CompResult step = COMP_RES__NO_ACTION;
+
+{% for dep in optional_deps %}
+    step = {{ catalog.deps[dep].setup_fn }}();
+    if (step == COMP_RES__FAILED)
+        return COMP_RES__FAILED;
+    if (step == COMP_RES__OK)
+        result = COMP_RES__OK;
+{% endfor %}
+{% if not optional_deps %}
+    nob_log(NOB_WARNING, "No optional dependencies enabled in this project.");
+    nob_log(NOB_WARNING, "Regenerate with deps from config/catalog.yaml or run scripts/enable-*.sh");
+{% endif %}
+
+    return result;
+}
+
+#endif

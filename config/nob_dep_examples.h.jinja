@@ -1,0 +1,48 @@
+#ifndef NOB_DEP_EXAMPLES_H
+#define NOB_DEP_EXAMPLES_H
+
+/* Optional dependency demos — generated from config/catalog.yaml + optional_deps. */
+
+static CompResult nob_build_dep_examples(Nob_File_Paths *sources, int *built_any)
+{
+    CompResult comp_res = COMP_RES__NO_ACTION;
+
+{% for dep in optional_deps %}
+{% set meta = catalog.deps[dep] %}
+{% set ex = meta.example %}
+    if (nob_file_exists({{ ex.source_macro }}))
+    {
+{% if ex.link_mode == "extra_obj" %}
+        comp_res = {{ meta.build_lib_fn }}(&g_build);
+        if (comp_res == COMP_RES__FAILED)
+            return COMP_RES__FAILED;
+
+        sources->count = 0;
+        nob_da_append(sources, {{ ex.source_macro }});
+        comp_res = build_program("{{ ex.binary }}", sources, &(FileList){0}, {{ ex.extra_obj_macro }});
+        MARK_BUILT(comp_res, *built_any);
+        if (comp_res == COMP_RES__FAILED)
+            return COMP_RES__FAILED;
+{% elif ex.link_mode == "stb_objs" %}
+        FileList {{ dep }}_objs = {0};
+        comp_res = {{ meta.build_lib_fn }}(&{{ dep }}_objs);
+        if (comp_res == COMP_RES__FAILED)
+            return COMP_RES__FAILED;
+
+        sources->count = 0;
+        nob_da_append(sources, {{ ex.source_macro }});
+        comp_res = build_program("{{ ex.binary }}", sources, &{{ dep }}_objs, NULL);
+        MARK_BUILT(comp_res, *built_any);
+        free_file_list(&{{ dep }}_objs);
+        if (comp_res == COMP_RES__FAILED)
+            return COMP_RES__FAILED;
+{% else %}
+#error "Unknown example link_mode for {{ dep }}"
+{% endif %}
+    }
+{% endfor %}
+
+    return comp_res;
+}
+
+#endif

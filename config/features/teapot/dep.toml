@@ -1,0 +1,4 @@
+# teapot optional dependency — fetched by: ./nob setup teapot
+kind = "submodule"
+path = "third_party/teapot"
+url = "https://github.com/Thunor12/teapot.git"
