@@ -1,0 +1,47 @@
+# Parameterized project generation.
+# Dep names and metadata: config/catalog.yaml
+#
+# Local preview (writes output_project/):
+#   pip install -r scripts/requirements-render.txt
+#   ./scripts/render-output-project.sh
+#   DEPS=sqlite,teapot ./scripts/render-output-project.sh
+#
+# Copier (any destination path):
+#   copier copy . path/to/my-project --trust
+#
+# Windows: use Git Bash/WSL for shell tasks, or render-output-project.ps1 locally.
+
+_min_copier_version: "9.0.0"
+
+project_name:
+  type: str
+  help: Project directory name
+  default: my_c_project
+
+optional_deps:
+  type: str
+  multiselect: true
+  help: Optional dependencies (names must match config/catalog.yaml)
+  choices:
+    - sqlite
+    - teapot
+  default: []
+
+_exclude:
+  - output_project
+  - nob.c
+  - nob_config.h
+  - config/nob_dep_setup.h
+  - config/nob_dep_examples.h
+  - nob.c.jinja
+  - nob_config.h.jinja
+  - config/nob_dep_setup.h.jinja
+  - config/nob_dep_examples.h.jinja
+  - CONTRIBUTING.md
+  - .github/workflows/ci.yml
+
+_tasks:
+  - command: pip install -q -r "{{ _copier_src }}/scripts/requirements-render.txt"
+    when: "{{ _copier_operation == 'copy' }}"
+  - command: python "{{ _copier_src }}/scripts/render_project.py" --deps "{{ optional_deps | join(',') }}" --output . --template "{{ _copier_src }}" --project-name "{{ project_name }}" --no-clean
+    when: "{{ _copier_operation == 'copy' }}"
